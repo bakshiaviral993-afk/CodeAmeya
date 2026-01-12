@@ -31,7 +31,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  assetPrefix: './',
   distDir: 'build',
 };
 
