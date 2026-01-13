@@ -32,7 +32,6 @@ export default function PopupPage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Gracefully handle chrome API not being available
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.sync.get(['enabled', 'language'], (result) => {
         if (result.enabled !== undefined) {
@@ -71,29 +70,22 @@ export default function PopupPage() {
   };
 
   const handleAutocorrect = async () => {
-    const sampleCode = "fuction add(a,b) { return a+b; }"; // your test snippet
-  
+    const sampleCode = "fuction add(a,b) { return a+b; }";
+
     try {
-      console.log('[autocorrect] Sending request to:', '/api/autocorrect');
-  
       const res = await fetch('/api/autocorrect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: sampleCode, language }),
       });
-  
+
       if (!res.ok) {
-        const errorText = await res.text().catch(() => '(no response body)');
-        console.error('[autocorrect] Failed:', {
-          status: res.status,
-          statusText: res.statusText,
-          body: errorText.slice(0, 500),
-        });
-        throw new Error(`Server responded ${res.status}: ${errorText}`);
+        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred.' }));
+        throw new Error(errorData.error || `Server responded with ${res.status}`);
       }
-  
+
       const data = await res.json();
-  
+      
       if (data.correctedCode && data.correctedCode.trim() !== '') {
         toast({
           title: 'Code Auto-corrected!',
@@ -113,7 +105,7 @@ export default function PopupPage() {
       console.error('Auto-correct failed:', error);
       toast({
         title: 'Auto-correct Error',
-        description: error.message || 'Failed to reach the server. Check console + network tab.',
+        description: error.message,
         variant: 'destructive',
       });
     }
@@ -128,29 +120,23 @@ export default function PopupPage() {
       });
       return;
     }
-  
+
     setIsGenerating(true);
-  
+
     try {
-      console.log('[generate] Sending to:', '/api/generate-code');
-  
       const res = await fetch('/api/generate-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, language }),
       });
-  
+
       if (!res.ok) {
-        const errorText = await res.text().catch(() => '(empty body)');
-        console.error('[generate] Failed:', {
-          status: res.status,
-          body: errorText.slice(0, 500),
-        });
-        throw new Error(`API error ${res.status}: ${errorText}`);
+        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred.' }));
+        throw new Error(errorData.error || `Server responded with ${res.status}`);
       }
-  
+
       const data = await res.json();
-  
+
       toast({
         title: 'Code Generated!',
         description: (
@@ -163,7 +149,7 @@ export default function PopupPage() {
       console.error('Code generation failed:', error);
       toast({
         title: 'Generation Failed',
-        description: error.message || 'Could not connect to the API. See console.',
+        description: error.message,
         variant: 'destructive',
       });
     } finally {
@@ -182,7 +168,7 @@ export default function PopupPage() {
   ];
 
   if (!isClient) {
-    return null; // Render nothing on the server
+    return null; 
   }
 
   return (
