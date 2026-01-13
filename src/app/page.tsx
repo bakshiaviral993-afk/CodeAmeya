@@ -136,6 +136,7 @@ export default function PopupPage() {
         const errorText = await res.text().catch(() => '(empty body)');
         console.error('[generate] Failed:', {
           status: res.status,
+          statusText: res.statusText,
           body: errorText.slice(0, 500),
         });
         throw new Error(`API error ${res.status}: ${errorText}`);

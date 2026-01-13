@@ -14,13 +14,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Await the result from the flow
     const result = await autoCorrectCode({code, language});
 
+    // The flow returns { correctedCode: '...' }, which is what the frontend expects.
+    // So we can return the result directly.
     return NextResponse.json(result);
-  } catch (error) {
-    console.error('Error in autocorrect API:', error);
-    const errorMessage =
-      error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({error: errorMessage}, {status: 500});
+
+  } catch (error: any) {
+    console.error('Error in autocorrect API route:', error);
+    return NextResponse.json(
+      { error: error.message || 'An unknown error occurred in the API route.' },
+      { status: 500 }
+    );
   }
 }
