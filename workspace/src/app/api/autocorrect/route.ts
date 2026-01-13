@@ -1,28 +1,45 @@
 
 // src/app/api/autocorrect/route.ts
-import {NextRequest, NextResponse} from 'next/server';
-import {autoCorrectCode} from '@/ai/flows/code-autocorrection';
+import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const {code, language} = body;
+    const body = await req.json().catch(() => {
+      throw new Error("Invalid JSON body");
+    });
+    
+    const { code, language } = body;
 
     if (!code || !language) {
       return NextResponse.json(
-        {error: 'Code and language are required'},
-        {status: 400}
+        { error: 'Code and language are required' },
+        { status: 400 }
       );
     }
-    
-    // Await the result from the wrapper function
-    const result = await autoCorrectCode({code, language});
-    
-    // The result is already in the correct { correctedCode: '...' } format.
-    // Return it directly.
-    return NextResponse.json(result);
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      console.error("[autocorrect] API key is missing");
+      return NextResponse.json({ error: "Server configuration error: API key not set" }, { status: 500 });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const fullPrompt = `You are an AI code assistant. Correct the following ${language} code snippet. Return only the corrected code, without any explanations or markdown fences.\n\nCode:\n${code}`;
+
+    const result = await model.generateContent(fullPrompt);
+    const response = result.response;
+    const correctedCode = response.text().trim();
+
+    return NextResponse.json({ correctedCode });
+
   } catch (error: any) {
-    console.error('Error in autocorrect API route:', error);
+    console.error('[autocorrect] Error:', {
+      message: error.message,
+      stack: error.stack,
+    });
     return NextResponse.json(
       { error: error.message || 'An unknown error occurred in the API route.' },
       { status: 500 }

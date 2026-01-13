@@ -1,11 +1,14 @@
 
 // src/app/api/generate-code/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { generateCode } from '@/ai/flows/code-generation-from-prompt';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => {
+      throw new Error("Invalid JSON body");
+    });
+    
     const { prompt, language } = body;
 
     if (!prompt) {
@@ -14,16 +17,29 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Await the result from the wrapper function
-    const result = await generateCode({ prompt, language });
     
-    // The result is already in the correct { code: '...' } format.
-    // Return it directly.
-    return NextResponse.json(result);
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      console.error("[generate-code] API key is missing");
+      return NextResponse.json({ error: "Server configuration error: API key not set" }, { status: 500 });
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const fullPrompt = `Generate clean ${language || 'code'} for the following prompt:\n\n${prompt}\n\nReturn only the code block, without any explanations or markdown fences.`;
+
+    const result = await model.generateContent(fullPrompt);
+    const response = result.response;
+    const code = response.text().trim();
+    
+    return NextResponse.json({ code });
     
   } catch (error: any) {
-    console.error('Error in generate-code API route:', error);
+    console.error('Error in generate-code API route:', {
+      message: error.message,
+      stack: error.stack,
+    });
     return NextResponse.json(
         { error: error.message || 'An unknown error occurred in the API route.' }, 
         { status: 500 }
