@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const fullPrompt = `Generate clean ${language || 'code'} for the following prompt:\n\n${prompt}\n\nReturn only the code block, without any explanations or markdown fences.`;
 
@@ -36,7 +36,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ code });
     
   } catch (error: any) {
-    console.error('Error in generate-code API route:', error);
+    console.error('Error in generate-code API route:', {
+      message: error.message,
+      stack: error.stack,
+    });
     return NextResponse.json(
         { error: error.message || 'An unknown error occurred in the API route.' }, 
         { status: 500 }
