@@ -1,13 +1,19 @@
-{
-  "name": "ai-code-assistant-extension",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "echo 'This is a Chrome Extension. Load the /public directory in chrome://extensions'",
-    "build": "echo 'No build step needed for this extension. The /public directory is the build output.'",
-    "start": "npm run dev",
-    "lint": "echo 'No linter configured.'"
-  },
-  "dependencies": {},
-  "devDependencies": {}
+import type { Metadata } from 'next';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'AI Code Assistant',
+  description: 'AI code assistant Chrome Extension landing page',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
 }

@@ -1,73 +1,77 @@
 // background.js - Service Worker
 
 // Handle keyboard shortcuts
-chrome.commands.onCommand.addListener((command, tab) => {
+chrome.commands.onCommand.addListener((command) => {
   if (command === 'auto-correct') {
-    chrome.tabs.sendMessage(tab.id, { action: 'autoCorrect' });
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'autoCorrect' });
+    });
   } else if (command === 'generate-code') {
-     chrome.tabs.sendMessage(tab.id, { action: 'generateCode' });
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'generateCode' });
+    });
   }
 });
 
 // Listen for messages from content script or popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'autoCorrect') {
-    handleAutoCorrect(request.code, sender.tab.id).then(sendResponse);
-    return true; // Indicates we will send a response asynchronously
+    handleAutoCorrect(request.code, sender.tab.id);
   } else if (request.action === 'generate') {
-    handleGenerate(request.prompt, sender.tab.id).then(sendResponse);
-    return true; // Indicates we will send a response asynchronously
+    handleGenerate(request.prompt, sender.tab.id);
   }
-  return false;
+  return true;
 });
 
 async function handleAutoCorrect(code, tabId) {
   try {
     const keys = await chrome.storage.local.get(['geminiKey', 'huggingfaceKey']);
-    const correctedCode = await autoCorrectCodeWithFallback(code, keys);
+    const correctedCode = await autoCorrectCode(code, keys);
     
-    // The content script will do the replacing after it gets the response
-    return { code: correctedCode };
+    chrome.tabs.sendMessage(tabId, {
+      action: 'replaceCode',
+      code: correctedCode
+    });
   } catch (error) {
     console.error('Auto-correct failed:', error);
-    return { error: error.message };
   }
 }
 
 async function handleGenerate(prompt, tabId) {
   try {
     const keys = await chrome.storage.local.get(['geminiKey', 'huggingfaceKey']);
-    const code = await generateCodeWithFallback(prompt, keys);
+    const code = await generateCode(prompt, keys);
     
-    // The content script will do the insertion after it gets the response
-    return { code: code };
+    chrome.tabs.sendMessage(tabId, {
+      action: 'insertCode',
+      code: code
+    });
   } catch (error) {
     console.error('Generate failed:', error);
-    return { error: error.message };
   }
 }
 
-async function autoCorrectCodeWithFallback(code, keys) {
-  const prompt = `Fix any syntax errors, bugs, or issues in this code. Return ONLY the corrected code without explanations or markdown fences:\n\n${code}`;
+async function autoCorrectCode(code, keys) {
+  const prompt = `Fix any syntax errors, bugs, or issues in this code. Return ONLY the corrected code without explanations:\n\n${code}`;
   
   // Try Gemini
   try {
     return await callGemini(prompt, 'gemini-1.5-flash', keys.geminiKey);
   } catch (err) {
-    console.warn('Gemini for auto-correct failed:', err);
+    console.warn('Gemini failed:', err);
   }
   
   // Try HuggingFace
   try {
     return await callHuggingFace(prompt, keys.huggingfaceKey);
   } catch (err) {
-    console.warn('HuggingFace for auto-correct failed:', err);
+    console.warn('HuggingFace failed:', err);
   }
   
   throw new Error('All AI models failed');
 }
 
-async function generateCodeWithFallback(prompt, keys) {
+async function generateCode(prompt, keys) {
   // Try Gemini Flash
   try {
     return await callGemini(prompt, 'gemini-1.5-flash', keys.geminiKey);
@@ -89,25 +93,17 @@ async function generateCodeWithFallback(prompt, keys) {
     console.warn('HuggingFace failed:', err);
   }
   
-  // Final fallback: Web search
-  try {
-    return await searchWebForCode(prompt);
-  } catch (err) {
-    console.warn('Web Search failed:', err);
-  }
-  
-  throw new Error('All code generation methods failed.');
+  throw new Error('All AI models failed');
 }
 
 async function callGemini(prompt, model, apiKey) {
-  if (!apiKey) throw new Error('Gemini API key is not set.');
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey
+      'x-goog-api-key': apiKey || ''
     },
     body: JSON.stringify({
       contents: [{
@@ -123,30 +119,26 @@ async function callGemini(prompt, model, apiKey) {
   });
   
   if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    const message = errorData?.error?.message || `Gemini API error: ${response.status}`;
-    throw new Error(message);
+    throw new Error(`Gemini API error: ${response.status}`);
   }
   
   const data = await response.json();
   if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    let code = data.candidates[0].content.parts[0].text;
-    return code.replace(/^```[\w-]*\n/, "").replace(/\n```$/, "").trim();
+    return data.candidates[0].content.parts[0].text;
   }
   
   throw new Error('No code generated by Gemini');
 }
 
 async function callHuggingFace(prompt, apiKey) {
-  if (!apiKey) throw new Error('HuggingFace API key is not set.');
   const response = await fetch('https://api-inference.huggingface.co/models/codellama/CodeLlama-34b-Instruct-hf', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
+      'Authorization': `Bearer ${apiKey || ''}`
     },
     body: JSON.stringify({
-      inputs: `Generate code for: ${prompt}. Return only code.`,
+      inputs: `Generate code: ${prompt}. Return only code.`,
       parameters: {
         max_new_tokens: 2048,
         temperature: 0.7,
@@ -161,17 +153,11 @@ async function callHuggingFace(prompt, apiKey) {
   
   const data = await response.json();
   if (Array.isArray(data) && data[0]?.generated_text) {
-    return data[0].generated_text.trim();
+    return data[0].generated_text;
   }
   
   throw new Error('No code generated by HuggingFace');
 }
-
-async function searchWebForCode(prompt) {
-  const query = encodeURIComponent(`${prompt} code example site:stackoverflow.com OR site:github.com`);
-  return `// Web search fallback activated.\n// Try searching for your query on popular developer sites:\n\n// Search on Stack Overflow:\n// https://stackoverflow.com/search?q=${query}\n\n// Search on GitHub:\n// https://github.com/search?q=${query}&type=code\n`;
-}
-
 
 // Context menu for right-click
 chrome.runtime.onInstalled.addListener(() => {
@@ -183,7 +169,7 @@ chrome.runtime.onInstalled.addListener(() => {
   
   chrome.contextMenus.create({
     id: 'ai-generate',
-    title: 'Generate code from selection',
+    title: 'Generate code with AI',
     contexts: ['selection']
   });
 });
@@ -192,6 +178,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'ai-auto-correct') {
     handleAutoCorrect(info.selectionText, tab.id);
   } else if (info.menuItemId === 'ai-generate') {
-    handleGenerate(info.selectionText, tab.id);
+    chrome.tabs.sendMessage(tab.id, { action: 'generateCode' });
   }
 });

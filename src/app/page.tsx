@@ -24,28 +24,20 @@ export default function Home() {
           
           <div className="space-y-6">
             <div>
-              <h3 className="text-xl font-semibold mb-2">1. Build the Extension</h3>
+              <h3 className="text-xl font-semibold mb-2">1. Load the Extension in Chrome</h3>
               <p className="text-gray-700 dark:text-gray-300">
-                After running the development server, you need to build the project to generate the extension files.
+                This project is now a Chrome Extension. The files are located in the `public` directory.
               </p>
-              <pre className="bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg mt-2 text-sm overflow-x-auto"><code>npm run build</code></pre>
-              <p className="text-sm text-gray-500 mt-2">
-                This will create a `build` directory containing the necessary files for the extension.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="text-xl font-semibold mb-2">2. Load in Chrome</h3>
-              <ul className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
+              <ul className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300 mt-2">
                 <li>Open Chrome and navigate to <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-md text-sm">chrome://extensions</code>.</li>
                 <li>Enable "Developer mode" using the toggle in the top-right corner.</li>
                 <li>Click the "Load unpacked" button.</li>
-                <li>Select the `build` folder from your project directory.</li>
+                <li>Select the `public` folder from your project directory.</li>
               </ul>
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold mb-2">3. Configure API Keys</h3>
+              <h3 className="text-xl font-semibold mb-2">2. Configure API Keys</h3>
                <p className="text-gray-700 dark:text-gray-300">
                 Click the newly added extension icon in your Chrome toolbar to open the popup. Inside the popup, find the "API Settings" section and enter your API keys for Gemini and/or HuggingFace.
               </p>
@@ -67,7 +59,7 @@ export default function Home() {
         </div>
 
         <footer className="text-center mt-16 text-gray-500">
-          <p>Built with Next.js and ❤️ for developers.</p>
+          <p>Built with ❤️ for developers.</p>
         </footer>
       </div>
     </main>

@@ -1,5 +1,6 @@
 // content.js - Runs on web pages with code editors
 
+// Detect code editors (textarea, contenteditable, Monaco, CodeMirror, etc.)
 let currentEditor = null;
 let suggestionBox = null;
 let debounceTimer = null;
@@ -11,7 +12,7 @@ function init() {
   createSuggestionBox();
   detectEditors();
   
-  // Listen for messages from popup or background script
+  // Listen for messages from popup
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'insertCode') {
       insertCodeIntoEditor(request.code);
@@ -22,89 +23,68 @@ function init() {
     } else if (request.action === 'replaceCode') {
       replaceSelectedCode(request.code);
       sendResponse({ success: true });
-    } else if (request.action === 'autoCorrect') {
-      // Triggered by keyboard shortcut
-      const selectedCode = getSelectedCode();
-      if (selectedCode) {
-        showNotification('Auto-correcting...', 'info');
-        chrome.runtime.sendMessage({ action: 'autoCorrect', code: selectedCode }, (response) => {
-            if (response && response.code) {
-                replaceSelectedCode(response.code);
-            } else {
-                showNotification(response.error || 'Failed to auto-correct', 'error');
-            }
-        });
-      } else {
-        showNotification('Please select code to auto-correct', 'error');
-      }
-      sendResponse({ success: true });
-    } else if (request.action === 'generateCode') {
-       // Triggered by keyboard shortcut
-      const prompt = window.prompt('Describe the code you want to generate:');
-      if (prompt) {
-        showNotification('Generating code...', 'info');
-        chrome.runtime.sendMessage({ action: 'generate', prompt: prompt }, (response) => {
-            if (response && response.code) {
-                insertCodeIntoEditor(response.code);
-            } else {
-                showNotification(response.error || 'Failed to generate code', 'error');
-            }
-        });
-      }
-      sendResponse({ success: true });
     }
-    return true; // Keep message channel open for async response
+    return true;
   });
 
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Ctrl+Shift+F: Auto-correct
+    if (e.ctrlKey && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      autoCorrectSelection();
+    }
+    
+    // Ctrl+Shift+G: Generate code
+    if (e.ctrlKey && e.shiftKey && e.key === 'G') {
+      e.preventDefault();
+      openGenerateDialog();
+    }
+  });
 }
 
 function createSuggestionBox() {
   suggestionBox = document.createElement('div');
   suggestionBox.id = 'ai-code-suggestion-box';
+  suggestionBox.style.cssText = `
+    position: fixed;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 999999;
+    display: none;
+    max-width: 400px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 13px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+  `;
   document.body.appendChild(suggestionBox);
 }
 
 function detectEditors() {
-  // Function to attach listeners
-  const attachToEditor = (editor) => {
-    if (editor.dataset.aiAssistantAttached) return;
-    editor.dataset.aiAssistantAttached = 'true';
+  // Detect textareas
+  document.querySelectorAll('textarea').forEach(textarea => {
+    attachToEditor(textarea);
+  });
 
-    editor.addEventListener('focus', () => {
-      currentEditor = editor;
-    });
-
-    editor.addEventListener('input', () => {
-      currentEditor = editor;
-      
-      // Debounce suggestions
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        provideSuggestion(editor);
-      }, 1000);
-    });
-
-    editor.addEventListener('blur', () => {
-      setTimeout(() => {
-        if (currentEditor === editor) {
-          hideSuggestion();
-        }
-      }, 200);
-    });
-  };
-
-  // Initial scan
-  document.querySelectorAll('textarea, [contenteditable="true"]').forEach(attachToEditor);
+  // Detect contenteditable elements
+  document.querySelectorAll('[contenteditable="true"]').forEach(element => {
+    attachToEditor(element);
+  });
 
   // Watch for dynamically added editors
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === 1) { // Check if it's an element
-          if (node.matches('textarea, [contenteditable="true"]')) {
+        if (node.nodeType === 1) {
+          if (node.tagName === 'TEXTAREA' || node.contentEditable === 'true') {
             attachToEditor(node);
           }
-          node.querySelectorAll('textarea, [contenteditable="true"]').forEach(attachToEditor);
+          // Check children
+          node.querySelectorAll?.('textarea, [contenteditable="true"]').forEach(attachToEditor);
         }
       });
     });
@@ -116,6 +96,32 @@ function detectEditors() {
   });
 }
 
+function attachToEditor(editor) {
+  if (editor.dataset.aiAssistantAttached) return;
+  editor.dataset.aiAssistantAttached = 'true';
+
+  editor.addEventListener('focus', () => {
+    currentEditor = editor;
+  });
+
+  editor.addEventListener('input', () => {
+    currentEditor = editor;
+    
+    // Debounce suggestions
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      provideSuggestion(editor);
+    }, 1000);
+  });
+
+  editor.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (currentEditor === editor) {
+        hideSuggestion();
+      }
+    }, 200);
+  });
+}
 
 async function provideSuggestion(editor) {
   const code = getEditorValue(editor);
@@ -174,13 +180,10 @@ function showSuggestion(text, editor) {
 }
 
 function hideSuggestion() {
-  if (suggestionBox) {
-    suggestionBox.style.display = 'none';
-  }
+  suggestionBox.style.display = 'none';
 }
 
 function getEditorValue(editor) {
-  if (!editor) return '';
   if (editor.tagName === 'TEXTAREA' || editor.tagName === 'INPUT') {
     return editor.value;
   } else if (editor.contentEditable === 'true') {
@@ -190,30 +193,29 @@ function getEditorValue(editor) {
 }
 
 function setEditorValue(editor, value) {
-  if (!editor) return;
   if (editor.tagName === 'TEXTAREA' || editor.tagName === 'INPUT') {
     editor.value = value;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
   } else if (editor.contentEditable === 'true') {
     editor.textContent = value;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
   }
-  // Dispatch an input event to notify frameworks like React
-  editor.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
 }
 
 function getSelectedCode() {
   const selection = window.getSelection();
-  if (selection && selection.toString()) {
+  if (selection.toString()) {
     return selection.toString();
   }
   
-  if (document.activeElement) {
-    const activeEl = document.activeElement;
-    if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') {
-      const start = activeEl.selectionStart;
-      const end = activeEl.selectionEnd;
+  if (currentEditor) {
+    if (currentEditor.tagName === 'TEXTAREA') {
+      const start = currentEditor.selectionStart;
+      const end = currentEditor.selectionEnd;
       if (start !== end) {
-        return activeEl.value.substring(start, end);
+        return currentEditor.value.substring(start, end);
       }
+      return currentEditor.value;
     }
   }
   
@@ -221,64 +223,113 @@ function getSelectedCode() {
 }
 
 function replaceSelectedCode(newCode) {
-  const activeEl = document.activeElement;
-  if (!activeEl) {
-    showNotification('No active editor found to replace code.', 'error');
-    return;
-  }
-
-  if (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT') {
-      const start = activeEl.selectionStart;
-      const end = activeEl.selectionEnd;
-      const value = activeEl.value;
+  if (currentEditor) {
+    if (currentEditor.tagName === 'TEXTAREA') {
+      const start = currentEditor.selectionStart;
+      const end = currentEditor.selectionEnd;
+      const value = currentEditor.value;
       
-      activeEl.value = value.substring(0, start) + newCode + value.substring(end);
-      
-      // Move cursor to end of inserted text
-      activeEl.selectionStart = activeEl.selectionEnd = start + newCode.length;
-
-      activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-      showNotification('Code replaced!', 'success');
-  } else if (activeEl.contentEditable === 'true') {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(document.createTextNode(newCode));
-        activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-        showNotification('Code replaced!', 'success');
+      if (start !== end) {
+        currentEditor.value = value.substring(0, start) + newCode + value.substring(end);
+      } else {
+        currentEditor.value = newCode;
       }
-  } else {
-    showNotification('Could not replace code in the current element.', 'error');
+      
+      currentEditor.dispatchEvent(new Event('input', { bubbles: true }));
+      showNotification('Code replaced!', 'success');
+    } else if (currentEditor.contentEditable === 'true') {
+      currentEditor.textContent = newCode;
+      currentEditor.dispatchEvent(new Event('input', { bubbles: true }));
+      showNotification('Code replaced!', 'success');
+    }
   }
 }
 
 function insertCodeIntoEditor(code) {
-  const editor = currentEditor || document.activeElement;
-  if (editor && (editor.tagName === 'TEXTAREA' || editor.contentEditable === 'true')) {
-    setEditorValue(editor, code);
+  if (currentEditor) {
+    setEditorValue(currentEditor, code);
     showNotification('Code inserted!', 'success');
   } else {
-    // Fallback to finding any editor
+    // Try to find any code editor
     const editors = document.querySelectorAll('textarea, [contenteditable="true"]');
     if (editors.length > 0) {
       setEditorValue(editors[0], code);
-      showNotification('Code inserted into the first available editor.', 'success');
+      showNotification('Code inserted!', 'success');
     } else {
+      showNotification('No editor found. Copy this code manually.', 'error');
       navigator.clipboard.writeText(code);
-      showNotification('No editor found. Code copied to clipboard.', 'error');
     }
+  }
+}
+
+function autoCorrectSelection() {
+  const code = getSelectedCode();
+  if (code) {
+    showNotification('Auto-correcting...', 'info');
+    // Trigger via popup
+    chrome.runtime.sendMessage({ action: 'autoCorrect', code: code });
+  } else {
+    showNotification('Please select code first', 'error');
+  }
+}
+
+function openGenerateDialog() {
+  const prompt = window.prompt('Describe the code you want to generate:');
+  if (prompt) {
+    chrome.runtime.sendMessage({ action: 'generate', prompt: prompt });
   }
 }
 
 function showNotification(message, type) {
   const notification = document.createElement('div');
-  notification.className = `ai-code-assistant-notification ${type}`;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    z-index: 9999999;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
   notification.textContent = message;
   document.body.appendChild(notification);
   
   setTimeout(() => {
-    notification.classList.add('fade-out');
-    setTimeout(() => notification.remove(), 500);
+    notification.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => notification.remove(), 300);
   }, 3000);
 }
+
+// Add animations
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+`;
+document.head.appendChild(style);
