@@ -1,3 +1,4 @@
+
 // src/app/api/autocorrect/route.ts
 import {NextRequest, NextResponse} from 'next/server';
 import {autoCorrectCode} from '@/ai/flows/code-autocorrection';
@@ -15,8 +16,6 @@ export async function POST(req: NextRequest) {
 
     const result = await autoCorrectCode({code, language});
 
-    // The result from the flow is { correctedCode: '...' }
-    // We need to send this back as JSON.
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error in autocorrect API:', error);

@@ -1,3 +1,4 @@
+
 // src/app/api/generate-code/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { generateCode } from '@/ai/flows/code-generation-from-prompt';
@@ -14,12 +15,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // The `generateCode` flow returns an object like `{ code: '...' }`.
-    // We await the result from the flow.
     const result = await generateCode({ prompt, language });
 
-    // Then we send a JSON response containing the `code` property from the result.
-    return NextResponse.json({ code: result.code });
+    return NextResponse.json(result);
     
   } catch (error) {
     console.error('Error in generate-code API:', error);
