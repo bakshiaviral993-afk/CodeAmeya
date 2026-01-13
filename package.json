@@ -3,25 +3,26 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "echo 'This is a Chrome Extension. To test, load the /public directory as an unpacked extension in chrome://extensions.'",
+    "dev": "serve public -p 3000",
     "build": "echo 'No build step needed. The /public directory contains the production-ready extension.'",
     "start": "npm run dev",
     "lint": "next lint"
   },
   "dependencies": {
+    "lucide-react": "^0.378.0",
     "next": "14.2.3",
     "react": "^18",
-    "react-dom": "^18",
-    "lucide-react": "^0.378.0"
+    "react-dom": "^18"
   },
   "devDependencies": {
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
     "eslint": "^8",
-    "eslint-config-next": "14.2.3"
+    "eslint-config-next": "14.2.3",
+    "postcss": "^8",
+    "serve": "^14.2.3",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }
