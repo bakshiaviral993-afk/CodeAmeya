@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/app/context/theme-context';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'Code Gemini',
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <ThemeProvider>
           {children}
+          <Toaster />
           </ThemeProvider>
       </body>
     </html>

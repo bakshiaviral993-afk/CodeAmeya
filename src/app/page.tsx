@@ -16,12 +16,15 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/app/context/theme-context';
 import { GoogleIcon } from '@/components/icons';
+import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 export default function PopupPage() {
   const { theme, toggleTheme } = useTheme();
   const [enabled, setEnabled] = useState(false);
   const [language, setLanguage] = useState('JavaScript');
   const [isClient, setIsClient] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsClient(true);
@@ -55,17 +58,50 @@ export default function PopupPage() {
   const handleSignIn = () => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.sendMessage({ type: 'SIGN_IN' });
+    } else {
+       toast({
+          title: 'Info',
+          description: 'Sign-in is only available within the Chrome extension.',
+        });
     }
   };
 
   const handleAutocorrect = () => {
-    if (typeof chrome !== 'undefined' && chrome.tabs) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0] && tabs[0].id) {
-          chrome.tabs.sendMessage(tabs[0].id, { type: 'TRIGGER_AUTOCORRECT' });
+    // This function will now call our new API route
+    // For demonstration, we'll use a hardcoded incorrect code snippet.
+    const sampleCode = "fuction add(a,b) { return a+b; }";
+
+    fetch('/api/autocorrect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code: sampleCode, language }),
+    })
+    .then(res => {
+        if (!res.ok) {
+            throw new Error('Network response was not ok');
         }
-      });
-    }
+        return res.json();
+    })
+    .then(data => {
+        toast({
+            title: 'Code Auto-corrected!',
+            description: (
+              <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+                <code className="text-white">{data.correctedCode}</code>
+              </pre>
+            ),
+          });
+    })
+    .catch(error => {
+        console.error('Error during auto-correct:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to auto-correct code. See console for details.',
+          variant: 'destructive',
+        });
+    });
   };
 
   const languages = [
@@ -83,67 +119,70 @@ export default function PopupPage() {
   }
 
   return (
-    <div className="bg-background text-foreground font-body w-[350px] min-h-[520px]">
-      <div className="p-4 space-y-4">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bot className="w-7 h-7 text-primary" />
-            <h1 className="text-2xl font-headline font-bold">Code Gemini</h1>
-          </div>
-          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </Button>
-        </header>
-
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 text-xs rounded-lg p-3 text-center">
-          <b>Internal Testing Only – Not for Production</b>
-        </div>
-
-        <Card>
-          <CardContent className="pt-6 space-y-6">
-            <div className="space-y-2">
-              <Button onClick={handleSignIn} className="w-full">
-                <GoogleIcon className="mr-2 h-4 w-4" />
-                Sign in with Google
-              </Button>
+    <>
+      <Toaster />
+      <div className="bg-background text-foreground font-body w-[350px] min-h-[520px]">
+        <div className="p-4 space-y-4">
+          <header className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="w-7 h-7 text-primary" />
+              <h1 className="text-2xl font-headline font-bold">Code Gemini</h1>
             </div>
-
-            <Separator />
-            
-            <div className="flex items-center justify-between">
-              <Label htmlFor="enable-suggestions" className="flex items-center gap-2 cursor-pointer">
-                <Sparkles className="w-5 h-5 text-accent" />
-                <span>Enable Suggestions</span>
-              </Label>
-              <Switch id="enable-suggestions" checked={enabled} onCheckedChange={handleEnableToggle} />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="language-select" className="flex items-center gap-2">
-                <Code className="w-5 h-5" />
-                <span>Language</span>
-              </Label>
-              <Select value={language} onValueChange={handleLangChange}>
-                <SelectTrigger id="language-select" className="w-full font-code">
-                  <SelectValue placeholder="Select language..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang} value={lang} className="font-code">
-                      {lang}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button onClick={handleAutocorrect} variant="secondary" className="w-full">
-              <Wand2 className="mr-2" />
-              Auto-Correct Current Field
+            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </Button>
-          </CardContent>
-        </Card>
+          </header>
+
+          <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 text-xs rounded-lg p-3 text-center">
+            <b>Internal Testing Only – Not for Production</b>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6 space-y-6">
+              <div className="space-y-2">
+                <Button onClick={handleSignIn} className="w-full">
+                  <GoogleIcon className="mr-2 h-4 w-4" />
+                  Sign in with Google
+                </Button>
+              </div>
+
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <Label htmlFor="enable-suggestions" className="flex items-center gap-2 cursor-pointer">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                  <span>Enable Suggestions</span>
+                </Label>
+                <Switch id="enable-suggestions" checked={enabled} onCheckedChange={handleEnableToggle} />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="language-select" className="flex items-center gap-2">
+                  <Code className="w-5 h-5" />
+                  <span>Language</span>
+                </Label>
+                <Select value={language} onValueChange={handleLangChange}>
+                  <SelectTrigger id="language-select" className="w-full font-code">
+                    <SelectValue placeholder="Select language..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languages.map((lang) => (
+                      <SelectItem key={lang} value={lang} className="font-code">
+                        {lang}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button onClick={handleAutocorrect} variant="secondary" className="w-full">
+                <Wand2 className="mr-2" />
+                Auto-Correct Current Field
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
