@@ -93,14 +93,21 @@ export default function PopupPage() {
   
       const data = await res.json();
   
-      toast({
-        title: 'Code Auto-corrected!',
-        description: (
-          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-60">
-            <code className="text-white text-sm">{data.correctedCode || JSON.stringify(data, null, 2)}</code>
-          </pre>
-        ),
-      });
+      if (data.correctedCode && data.correctedCode.trim() !== '') {
+        toast({
+          title: 'Code Auto-corrected!',
+          description: (
+            <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-60">
+              <code className="text-white text-sm">{data.correctedCode}</code>
+            </pre>
+          ),
+        });
+      } else {
+        toast({
+          title: 'Auto-Correction Result',
+          description: 'There is no code to present.',
+        });
+      }
     } catch (error: any) {
       console.error('Auto-correct failed:', error);
       toast({
@@ -136,7 +143,6 @@ export default function PopupPage() {
         const errorText = await res.text().catch(() => '(empty body)');
         console.error('[generate] Failed:', {
           status: res.status,
-          statusText: res.statusText,
           body: errorText.slice(0, 500),
         });
         throw new Error(`API error ${res.status}: ${errorText}`);
