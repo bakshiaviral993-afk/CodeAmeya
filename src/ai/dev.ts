@@ -3,7 +3,8 @@ import 'dotenv/config';
 
 import { configureGenkit, runDevServer } from '@genkit-ai/core';
 import { googleAI } from '@genkit-ai/google-genai';
-import { defineFlow } from '@genkit-ai/flow';
+import { defineFlow } from 'genkit/flow';
+import { z } from 'zod';
 
 // --- Check API key exists ---
 if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
@@ -20,18 +21,15 @@ configureGenkit({
     }),
   ],
   logLevel: 'info',
+  enableTracingAndMetrics: true,
 });
 
 // --- Example test flow (you can change/remove) ---
 export const helloFlow = defineFlow(
   {
     name: 'helloFlow',
-    inputSchema: {
-      name: 'string',
-    },
-    outputSchema: {
-      message: 'string',
-    },
+    inputSchema: z.object({ name: z.string() }),
+    outputSchema: z.object({ message: z.string() }),
   },
   async (input) => {
     return {
