@@ -37,4 +37,9 @@ export const helloFlow = ai.defineFlow(
   }
 );
 
-console.log('Genkit configured with helloFlow');
+// Import all your code generation flows
+import './flows/code-autocorrection';
+import './flows/code-generation-from-prompt';
+import './flows/realtime-code-suggestions';
+
+console.log('Genkit configured with helloFlow and all code generation flows');
