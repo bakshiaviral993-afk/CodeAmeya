@@ -4,6 +4,7 @@
  * @fileOverview AI-powered code auto-correction flow.
  *
  * - autoCorrectCode - A function that corrects the input code.
+ * - autoCorrectCodeFlow - The Genkit flow definition.
  * - AutoCorrectCodeInput - The input type for the autoCorrectCode function.
  * - AutoCorrectCodeOutput - The return type for the autoCorrectCode function.
  */
@@ -24,10 +25,6 @@ const AutoCorrectCodeOutputSchema = z.object({
 
 export type AutoCorrectCodeOutput = z.infer<typeof AutoCorrectCodeOutputSchema>;
 
-export async function autoCorrectCode(input: AutoCorrectCodeInput): Promise<AutoCorrectCodeOutput> {
-  return autoCorrectCodeFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'autoCorrectCodePrompt',
   input: {schema: AutoCorrectCodeInputSchema},
@@ -36,12 +33,12 @@ const prompt = ai.definePrompt({
 
   Correct the following code snippet, ensuring it is syntactically correct and follows best practices for the specified language. If the code is correct, return it as is.
 
-  Language: {{{language}}}
-  Code: {{{code}}}
+  Language: {{language}}
+  Code: {{code}}
   `,
 });
 
-const autoCorrectCodeFlow = ai.defineFlow(
+export const autoCorrectCodeFlow = ai.defineFlow(
   {
     name: 'autoCorrectCodeFlow',
     inputSchema: AutoCorrectCodeInputSchema,
@@ -54,3 +51,7 @@ const autoCorrectCodeFlow = ai.defineFlow(
     };
   }
 );
+
+export async function autoCorrectCode(input: AutoCorrectCodeInput): Promise<AutoCorrectCodeOutput> {
+  return autoCorrectCodeFlow(input);
+}

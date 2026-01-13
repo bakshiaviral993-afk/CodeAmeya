@@ -3,6 +3,7 @@
  * @fileOverview An AI agent to generate code from a prompt.
  *
  * - generateCode - A function that generates code from a prompt.
+ * - generateCodeFlow - The Genkit flow definition.
  * - GenerateCodeInput - The input type for the generateCode function.
  * - GenerateCodeOutput - The return type for the generateCode function.
  */
@@ -21,10 +22,6 @@ const GenerateCodeOutputSchema = z.object({
 });
 export type GenerateCodeOutput = z.infer<typeof GenerateCodeOutputSchema>;
 
-export async function generateCode(input: GenerateCodeInput): Promise<GenerateCodeOutput> {
-  return generateCodeFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'generateCodePrompt',
   input: {schema: GenerateCodeInputSchema},
@@ -33,11 +30,11 @@ const prompt = ai.definePrompt({
 
   Please generate code based on the following prompt, using the specified language if provided.
 
-  Language: {{{language}}}
-  Prompt: {{{prompt}}}`,
+  Language: {{language}}
+  Prompt: {{prompt}}`,
 });
 
-const generateCodeFlow = ai.defineFlow(
+export const generateCodeFlow = ai.defineFlow(
   {
     name: 'generateCodeFlow',
     inputSchema: GenerateCodeInputSchema,
@@ -48,3 +45,7 @@ const generateCodeFlow = ai.defineFlow(
     return output!;
   }
 );
+
+export async function generateCode(input: GenerateCodeInput): Promise<GenerateCodeOutput> {
+  return generateCodeFlow(input);
+}
