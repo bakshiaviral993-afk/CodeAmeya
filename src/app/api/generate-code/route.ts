@@ -4,7 +4,8 @@ import { generateCode } from '@/ai/flows/code-generation-from-prompt';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, language } = await req.json();
+    const body = await req.json();
+    const { prompt, language } = body;
 
     if (!prompt) {
       return NextResponse.json(
@@ -17,8 +18,9 @@ export async function POST(req: NextRequest) {
     // We await the result from the flow.
     const result = await generateCode({ prompt, language });
 
-    // Then we send a JSON response containing the `code` property.
+    // Then we send a JSON response containing the `code` property from the result.
     return NextResponse.json({ code: result.code });
+    
   } catch (error) {
     console.error('Error in generate-code API:', error);
     const errorMessage =
