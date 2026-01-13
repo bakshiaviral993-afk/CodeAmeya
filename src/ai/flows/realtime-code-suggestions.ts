@@ -4,6 +4,7 @@
  * @fileOverview A real-time code suggestion AI agent.
  *
  * - suggestCode - A function that suggests code in real time.
+ * - suggestCodeFlow - The Genkit flow definition.
  * - SuggestCodeInput - The input type for the suggestCode function.
  * - SuggestCodeOutput - The return type for the suggestCode function.
  */
@@ -22,10 +23,6 @@ const SuggestCodeOutputSchema = z.object({
 });
 export type SuggestCodeOutput = z.infer<typeof SuggestCodeOutputSchema>;
 
-export async function suggestCode(input: SuggestCodeInput): Promise<SuggestCodeOutput> {
-  return suggestCodeFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'suggestCodePrompt',
   input: {schema: SuggestCodeInputSchema},
@@ -41,7 +38,7 @@ Programming Language:
 Suggestion:`,
 });
 
-const suggestCodeFlow = ai.defineFlow(
+export const suggestCodeFlow = ai.defineFlow(
   {
     name: 'suggestCodeFlow',
     inputSchema: SuggestCodeInputSchema,
@@ -52,3 +49,7 @@ const suggestCodeFlow = ai.defineFlow(
     return output!;
   }
 );
+
+export async function suggestCode(input: SuggestCodeInput): Promise<SuggestCodeOutput> {
+  return suggestCodeFlow(input);
+}
