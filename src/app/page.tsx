@@ -122,22 +122,39 @@ export default function PopupPage() {
 
     setIsGenerating(true);
 
-    const yourName = "Alice";
-    const generatedCode = `public class Main {\n    public static void main(String[] args) {\n        // Your name has been inserted below\n        System.out.println("${yourName}");\n    }\n}`;
+    try {
+      const res = await fetch('/api/generate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, language }),
+      });
 
-    // Simulate a network delay to show the "Generating..." state
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsGenerating(false);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred.' }));
+        throw new Error(errorData.error || `Server responded with ${res.status}`);
+      }
 
-    toast({
-      title: 'Code Generated!',
-      description: (
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-80">
-          <code className="text-white text-sm whitespace-pre-wrap">{generatedCode}</code>
-        </pre>
-      ),
-    });
+      const data = await res.json();
+      
+      toast({
+        title: 'Code Generated!',
+        description: (
+          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-80">
+            <code className="text-white text-sm whitespace-pre-wrap">{data.code || 'No code returned'}</code>
+          </pre>
+        ),
+      });
+
+    } catch (error: any) {
+      console.error('Code generation failed:', error);
+      toast({
+        title: 'Generation Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const languages = [
