@@ -84,8 +84,20 @@ export default function PopupPage() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred.' }));
-        throw new Error(errorData.error || `Server responded with ${res.status}`);
+        let message = `Request failed with status ${res.status}`;
+        try {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await res.json();
+            message = data.error || JSON.stringify(data);
+          } else {
+            const text = await res.text();
+            message += ` – non-JSON body: ${text.substring(0, 300)}`;
+          }
+        } catch (e) {
+          message += ' (could not parse response body)';
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();
@@ -135,8 +147,20 @@ export default function PopupPage() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred.' }));
-        throw new Error(errorData.error || `Server responded with ${res.status}`);
+        let message = `Request failed with status ${res.status}`;
+        try {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const data = await res.json();
+            message = data.error || JSON.stringify(data);
+          } else {
+            const text = await res.text();
+            message += ` – non-JSON body: ${text.substring(0, 300)}`;
+          }
+        } catch (e) {
+          message += ' (could not parse response body)';
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();
