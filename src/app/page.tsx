@@ -20,6 +20,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Textarea } from '@/components/ui/textarea';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL 
+  || (process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000' 
+      : 'https://your-deployed-domain.web.app');
+
 export default function PopupPage() {
   const { theme, toggleTheme } = useTheme();
   const [enabled, setEnabled] = useState(false);
@@ -69,79 +74,98 @@ export default function PopupPage() {
     }
   };
 
-  const handleAutocorrect = () => {
-    // For demonstration, we'll use a hardcoded incorrect code snippet.
-    const sampleCode = "fuction add(a,b) { return a+b; }";
-
-    fetch('/api/autocorrect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: sampleCode, language }),
-    })
-    .then(res => {
-        if (!res.ok) { throw new Error('Network response was not ok'); }
-        return res.json();
-    })
-    .then(data => {
-        toast({
-            title: 'Code Auto-corrected!',
-            description: (
-              <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-                <code className="text-white">{data.correctedCode}</code>
-              </pre>
-            ),
-          });
-    })
-    .catch(error => {
-        console.error('Error during auto-correct:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to auto-correct code. See console for details.',
-          variant: 'destructive',
+  const handleAutocorrect = async () => {
+    const sampleCode = "fuction add(a,b) { return a+b; }"; // your test snippet
+  
+    try {
+      console.log('[autocorrect] Sending request to:', `${API_BASE}/api/autocorrect`);
+  
+      const res = await fetch(`${API_BASE}/api/autocorrect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: sampleCode, language }),
+      });
+  
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '(no response body)');
+        console.error('[autocorrect] Failed:', {
+          status: res.status,
+          statusText: res.statusText,
+          body: errorText.slice(0, 500),
         });
-    });
+        throw new Error(`Server responded ${res.status}: ${errorText}`);
+      }
+  
+      const data = await res.json();
+  
+      toast({
+        title: 'Code Auto-corrected!',
+        description: (
+          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-60">
+            <code className="text-white text-sm">{data.correctedCode || JSON.stringify(data, null, 2)}</code>
+          </pre>
+        ),
+      });
+    } catch (error: any) {
+      console.error('Auto-correct failed:', error);
+      toast({
+        title: 'Auto-correct Error',
+        description: error.message || 'Failed to reach the server. Check console + network tab.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleGenerateCode = () => {
-    if (!prompt) {
+  const handleGenerateCode = async () => {
+    if (!prompt.trim()) {
       toast({
-        title: 'Prompt is empty',
-        description: 'Please enter a prompt to generate code.',
-        variant: 'destructive'
+        title: 'Prompt Required',
+        description: 'Please enter a description for the code you want.',
+        variant: 'destructive',
       });
       return;
     }
+  
     setIsGenerating(true);
-    fetch('/api/generate-code', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, language }),
-    })
-    .then(res => {
-        if (!res.ok) { throw new Error('Network response was not ok'); }
-        return res.json();
-    })
-    .then(data => {
-        toast({
-            title: 'Code Generated!',
-            description: (
-              <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-                <code className="text-white">{data.code}</code>
-              </pre>
-            ),
-          });
-    })
-    .catch(error => {
-        console.error('Error during code generation:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to generate code. See console for details.',
-          variant: 'destructive',
+  
+    try {
+      console.log('[generate] Sending to:', `${API_BASE}/api/generate-code`);
+  
+      const res = await fetch(`${API_BASE}/api/generate-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, language }),
+      });
+  
+      if (!res.ok) {
+        const errorText = await res.text().catch(() => '(empty body)');
+        console.error('[generate] Failed:', {
+          status: res.status,
+          body: errorText.slice(0, 500),
         });
-    })
-    .finally(() => {
+        throw new Error(`API error ${res.status}: ${errorText}`);
+      }
+  
+      const data = await res.json();
+  
+      toast({
+        title: 'Code Generated!',
+        description: (
+          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-80">
+            <code className="text-white text-sm whitespace-pre-wrap">{data.code || 'No code returned'}</code>
+          </pre>
+        ),
+      });
+    } catch (error: any) {
+      console.error('Code generation failed:', error);
+      toast({
+        title: 'Generation Failed',
+        description: error.message || 'Could not connect to the API. See console.',
+        variant: 'destructive',
+      });
+    } finally {
       setIsGenerating(false);
-    });
+    }
   };
 
   const languages = [
