@@ -20,11 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Textarea } from '@/components/ui/textarea';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL 
-  || (process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
-      : 'https://your-deployed-domain.web.app');
-
 export default function PopupPage() {
   const { theme, toggleTheme } = useTheme();
   const [enabled, setEnabled] = useState(false);
@@ -78,9 +73,9 @@ export default function PopupPage() {
     const sampleCode = "fuction add(a,b) { return a+b; }"; // your test snippet
   
     try {
-      console.log('[autocorrect] Sending request to:', `${API_BASE}/api/autocorrect`);
+      console.log('[autocorrect] Sending request to:', '/api/autocorrect');
   
-      const res = await fetch(`${API_BASE}/api/autocorrect`, {
+      const res = await fetch('/api/autocorrect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: sampleCode, language }),
@@ -129,9 +124,9 @@ export default function PopupPage() {
     setIsGenerating(true);
   
     try {
-      console.log('[generate] Sending to:', `${API_BASE}/api/generate-code`);
+      console.log('[generate] Sending to:', '/api/generate-code');
   
-      const res = await fetch(`${API_BASE}/api/generate-code`, {
+      const res = await fetch('/api/generate-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, language }),
