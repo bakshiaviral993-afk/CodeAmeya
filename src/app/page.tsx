@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,7 +26,7 @@ export default function PopupPage() {
   const [enabled, setEnabled] = useState(false);
   const [language, setLanguage] = useState('Java');
   const [isClient, setIsClient] = useState(false);
-  const [prompt, setPrompt] = useState('A Java program to print my name');
+  const [prompt, setPrompt] = useState(`A ${language} program to print my name`);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -42,6 +43,10 @@ export default function PopupPage() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    setPrompt(`A ${language} program to print my name`);
+  }, [language]);
 
   const handleEnableToggle = (checked: boolean) => {
     setEnabled(checked);
