@@ -3,7 +3,7 @@ import 'dotenv/config';
 
 import { configureGenkit, runDevServer } from '@genkit-ai/core';
 import { googleAI } from '@genkit-ai/google-genai';
-import { defineFlow } from 'genkit/flow';
+import { defineFlow } from 'genkit';
 import { z } from 'zod';
 
 // --- Check API key exists ---
