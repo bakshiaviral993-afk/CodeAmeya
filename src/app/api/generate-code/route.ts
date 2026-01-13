@@ -1,10 +1,12 @@
 
+// src/app/api/generate-code/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { generateCode } from '@/ai/flows/code-generation-from-prompt';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, language } = await req.json();
+    const body = await req.json();
+    const { prompt, language } = body;
 
     if (!prompt) {
       return NextResponse.json(
@@ -16,11 +18,12 @@ export async function POST(req: NextRequest) {
     const result = await generateCode({ prompt, language });
     
     return NextResponse.json(result);
-  } catch (err: any) {
-    console.error('[API] Error in /api/generate-code:', err);
+    
+  } catch (error: any) {
+    console.error('Error in generate-code API route:', error);
     return NextResponse.json(
-      { error: err.message || 'An internal server error occurred.' },
-      { status: 500 }
+        { error: error.message || 'An unknown error occurred in the API route.' }, 
+        { status: 500 }
     );
   }
 }
