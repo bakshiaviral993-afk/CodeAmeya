@@ -2,7 +2,7 @@
 import 'dotenv/config';
 
 import { configureGenkit, runDevServer } from '@genkit-ai/core';
-import { googleAI, configureGoogleGenai } from '@genkit-ai/google-genai';
+import { googleAI } from '@genkit-ai/google-genai';
 import { defineFlow } from '@genkit-ai/flow';
 
 // --- Check API key exists ---
@@ -12,14 +12,13 @@ if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
   );
 }
 
-// --- Configure Google GenAI ---
-configureGoogleGenai({
-  apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
-});
-
 // --- Configure Genkit core ---
 configureGenkit({
-  plugins: [googleAI()],
+  plugins: [
+    googleAI({
+      apiKey: process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY,
+    }),
+  ],
   logLevel: 'info',
 });
 
