@@ -13,10 +13,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // The flow returns an object with a `code` property.
-    // We need to call it and then send that property back to the client.
+    // The `generateCode` flow returns an object like `{ code: '...' }`.
+    // We await the result from the flow.
     const result = await generateCode({ prompt, language });
 
+    // Then we send a JSON response containing the `code` property.
     return NextResponse.json({ code: result.code });
   } catch (error) {
     console.error('Error in generate-code API:', error);
