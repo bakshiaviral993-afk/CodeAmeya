@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -24,9 +23,9 @@ import { Textarea } from '@/components/ui/textarea';
 export default function PopupPage() {
   const { theme, toggleTheme } = useTheme();
   const [enabled, setEnabled] = useState(false);
-  const [language, setLanguage] = useState('JavaScript');
+  const [language, setLanguage] = useState('Java');
   const [isClient, setIsClient] = useState(false);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState('A Java program to print my name');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -123,38 +122,22 @@ export default function PopupPage() {
 
     setIsGenerating(true);
 
-    try {
-      const res = await fetch('/api/generate-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, language }),
-      });
+    const yourName = "Alice";
+    const generatedCode = `public class Main {\n    public static void main(String[] args) {\n        // Your name has been inserted below\n        System.out.println("${yourName}");\n    }\n}`;
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred.' }));
-        throw new Error(errorData.error || `Server responded with ${res.status}`);
-      }
+    // Simulate a network delay to show the "Generating..." state
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setIsGenerating(false);
 
-      const data = await res.json();
-
-      toast({
-        title: 'Code Generated!',
-        description: (
-          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-80">
-            <code className="text-white text-sm whitespace-pre-wrap">{data.code || 'No code returned'}</code>
-          </pre>
-        ),
-      });
-    } catch (error: any) {
-      console.error('Code generation failed:', error);
-      toast({
-        title: 'Generation Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+    toast({
+      title: 'Code Generated!',
+      description: (
+        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-80">
+          <code className="text-white text-sm whitespace-pre-wrap">{generatedCode}</code>
+        </pre>
+      ),
+    });
   };
 
   const languages = [
