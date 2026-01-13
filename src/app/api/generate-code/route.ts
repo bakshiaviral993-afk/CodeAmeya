@@ -14,11 +14,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Await the result from the flow
     const result = await generateCode({ prompt, language });
     
-    // The flow returns { code: '...' }, which is what the frontend expects.
-    // So we can return the result directly.
     return NextResponse.json(result);
     
   } catch (error: any) {

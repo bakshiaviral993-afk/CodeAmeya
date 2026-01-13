@@ -14,13 +14,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Await the result from the flow
     const result = await autoCorrectCode({code, language});
 
-    // The flow returns { correctedCode: '...' }, which is what the frontend expects.
-    // So we can return the result directly.
     return NextResponse.json(result);
-
   } catch (error: any) {
     console.error('Error in autocorrect API route:', error);
     return NextResponse.json(
