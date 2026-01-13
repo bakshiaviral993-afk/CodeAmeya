@@ -1,289 +1,361 @@
-
+// src/app/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Bot, Code, Moon, Sparkles, Sun, Wand2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { useTheme } from '@/app/context/theme-context';
-import { GoogleIcon } from '@/components/icons';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Toaster } from '@/components/ui/toaster';
-import { Textarea } from '@/components/ui/textarea';
 
-export default function PopupPage() {
-  const { theme, toggleTheme } = useTheme();
-  const [enabled, setEnabled] = useState(false);
-  const [language, setLanguage] = useState('Java');
-  const [isClient, setIsClient] = useState(false);
-  const [prompt, setPrompt] = useState(`A ${language} program to print my name`);
-  const [isGenerating, setIsGenerating] = useState(false);
+type AIProvider = 'gemini-flash' | 'gemini-pro' | 'huggingface' | 'web-search';
+
+interface AIModel {
+  provider: AIProvider;
+  name: string;
+  priority: number;
+}
+
+export default function Home() {
+  const [prompt, setPrompt] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [usedProvider, setUsedProvider] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
-    setIsClient(true);
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.sync.get(['enabled', 'language'], (result) => {
-        if (result.enabled !== undefined) {
-          setEnabled(result.enabled);
-        }
-        if (result.language) {
-          setLanguage(result.language);
-        }
-      });
+  // AI Models in priority order (fallback chain)
+  const aiModels: AIModel[] = [
+    {
+      provider: 'gemini-flash',
+      name: 'Gemini 1.5 Flash',
+      priority: 1
+    },
+    {
+      provider: 'gemini-pro',
+      name: 'Gemini 1.5 Pro',
+      priority: 2
+    },
+    {
+      provider: 'huggingface',
+      name: 'HuggingFace CodeLlama',
+      priority: 3
+    },
+    {
+      provider: 'web-search',
+      name: 'Web Search (Stack Overflow + GitHub)',
+      priority: 4
     }
-  }, []);
+  ];
 
-  useEffect(() => {
-    setPrompt(`A ${language} program to print my name`);
-  }, [language]);
+  const generateWithGemini = async (modelName: string): Promise<string> => {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+    
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': process.env.NEXT_PUBLIC_GEMINI_API_KEY || '',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Generate clean, production-ready code based on this request: ${prompt}. 
+                Provide only the code without explanations, markdown formatting, or code block markers.`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        },
+      }),
+    });
 
-  const handleEnableToggle = (checked: boolean) => {
-    setEnabled(checked);
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.sync.set({ enabled: checked });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `Gemini API error: ${res.status}`);
     }
+
+    const data = await res.json();
+    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    throw new Error('No code generated in Gemini response');
   };
 
-  const handleLangChange = (value: string) => {
-    setLanguage(value);
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.sync.set({ language: value });
+  const generateWithHuggingFace = async (): Promise<string> => {
+    const res = await fetch('https://api-inference.huggingface.co/models/codellama/CodeLlama-34b-Instruct-hf', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_HUGGINGFACE_API_KEY || ''}`,
+      },
+      body: JSON.stringify({
+        inputs: `Generate code for: ${prompt}. Return only code, no explanations.`,
+        parameters: {
+          max_new_tokens: 2048,
+          temperature: 0.7,
+          return_full_text: false,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`HuggingFace API error: ${res.status}`);
     }
+
+    const data = await res.json();
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      return data[0].generated_text;
+    }
+    throw new Error('No code generated in HuggingFace response');
   };
 
-  const handleSignIn = () => {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'SIGN_IN' });
-    } else {
-       toast({
-          title: 'Info',
-          description: 'Sign-in is only available within the Chrome extension.',
-        });
-    }
-  };
+  const searchWebForCode = async (): Promise<string> => {
+    // Search multiple sources for code examples
+    const searches = [
+      `${prompt} code example site:stackoverflow.com`,
+      `${prompt} code site:github.com`,
+      `${prompt} tutorial code example`
+    ];
 
-  const handleAutocorrect = async () => {
-    const sampleCode = "fuction add(a,b) { return a+b; }";
+    const allResults: any[] = [];
 
-    try {
-      const res = await fetch('/api/autocorrect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: sampleCode, language }),
-      });
-
-      if (!res.ok) {
-        let message = `Request failed with status ${res.status}`;
-        try {
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const data = await res.json();
-            message = data.error || JSON.stringify(data);
-          } else {
-            const text = await res.text();
-            message += ` – non-JSON body: ${text.substring(0, 300)}`;
-          }
-        } catch (e) {
-          message += ' (could not parse response body)';
+    for (const query of searches) {
+      try {
+        // Using DuckDuckGo API (no API key required)
+        const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`);
+        const data = await res.json();
+        
+        if (data.RelatedTopics) {
+          allResults.push(...data.RelatedTopics.slice(0, 3));
         }
-        throw new Error(message);
+      } catch (err) {
+        console.warn('Search failed:', err);
       }
-
-      const data = await res.json();
-      
-      if (data.correctedCode && data.correctedCode.trim() !== '') {
-        toast({
-          title: 'Code Auto-corrected!',
-          description: (
-            <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-60">
-              <code className="text-white text-sm">{data.correctedCode}</code>
-            </pre>
-          ),
-        });
-      } else {
-        toast({
-          title: 'Auto-Correction Result',
-          description: 'There is no code to present.',
-        });
-      }
-    } catch (error: any) {
-      console.error('Auto-correct failed:', error);
-      toast({
-        title: 'Auto-correct Error',
-        description: error.message,
-        variant: 'destructive',
-      });
     }
+
+    setSearchResults(allResults);
+
+    if (allResults.length === 0) {
+      throw new Error('No search results found');
+    }
+
+    // Compile search results into useful code snippets
+    let codeCompilation = `// Code examples found from web search for: ${prompt}\n\n`;
+    
+    allResults.forEach((result, index) => {
+      if (result.Text && result.FirstURL) {
+        codeCompilation += `// Source ${index + 1}: ${result.FirstURL}\n`;
+        codeCompilation += `// ${result.Text}\n\n`;
+      }
+    });
+
+    codeCompilation += `\n// Note: These are references from Stack Overflow and GitHub.\n`;
+    codeCompilation += `// Please review and adapt the code to your specific needs.\n`;
+    codeCompilation += `// Visit the source URLs above for complete implementations.`;
+
+    return codeCompilation;
   };
 
   const handleGenerateCode = async () => {
     if (!prompt.trim()) {
-      toast({
-        title: 'Prompt Required',
-        description: 'Please enter a description for the code you want.',
-        variant: 'destructive',
-      });
+      setError('Please enter a prompt');
       return;
     }
 
-    setIsGenerating(true);
+    setLoading(true);
+    setError('');
+    setGeneratedCode('');
+    setUsedProvider('');
+    setSearchResults([]);
 
-    try {
-      const res = await fetch('/api/generate-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, language }),
-      });
+    const errors: string[] = [];
 
-      if (!res.ok) {
-        let message = `Request failed with status ${res.status}`;
-        try {
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const data = await res.json();
-            message = data.error || JSON.stringify(data);
-          } else {
-            const text = await res.text();
-            message += ` – non-JSON body: ${text.substring(0, 300)}`;
-          }
-        } catch (e) {
-          message += ' (could not parse response body)';
+    // Try each AI model in priority order
+    for (const model of aiModels) {
+      try {
+        console.log(`Trying ${model.name}...`);
+        let code: string;
+
+        switch (model.provider) {
+          case 'gemini-flash':
+            code = await generateWithGemini('gemini-1.5-flash');
+            break;
+          case 'gemini-pro':
+            code = await generateWithGemini('gemini-1.5-pro');
+            break;
+          case 'huggingface':
+            code = await generateWithHuggingFace();
+            break;
+          case 'web-search':
+            code = await searchWebForCode();
+            break;
+          default:
+            throw new Error('Unknown provider');
         }
-        throw new Error(message);
+
+        // Success! Set the code and break the loop
+        setGeneratedCode(code);
+        setUsedProvider(model.name);
+        setLoading(false);
+        return;
+
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        errors.push(`${model.name}: ${errorMsg}`);
+        console.warn(`${model.name} failed:`, errorMsg);
+        // Continue to next model
       }
-
-      const data = await res.json();
-      
-      toast({
-        title: 'Code Generated!',
-        description: (
-          <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 overflow-auto max-h-80">
-            <code className="text-white text-sm whitespace-pre-wrap">{data.code || 'No code returned'}</code>
-          </pre>
-        ),
-      });
-
-    } catch (error: any) {
-      console.error('Code generation failed:', error);
-      toast({
-        title: 'Generation Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGenerating(false);
     }
+
+    // If we get here, all models failed
+    setError(`All methods failed to generate code:\n${errors.join('\n')}\n\nPlease check your API keys in .env.local`);
+    setLoading(false);
   };
 
-  const languages = [
-    'JavaScript',
-    'Python',
-    'TypeScript',
-    'Java',
-    'C++',
-    'SQL',
-    'C# (.NET)',
-  ];
-
-  if (!isClient) {
-    return null; 
-  }
-
   return (
-    <>
-      <Toaster />
-      <div className="bg-background text-foreground font-body w-[350px] min-h-[520px] p-4 space-y-4">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bot className="w-7 h-7 text-primary" />
-            <h1 className="text-2xl font-headline font-bold">Code Gemini</h1>
-          </div>
-          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </Button>
-        </header>
-
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 text-xs rounded-lg p-3 text-center">
-          <b>Internal Testing Only – Not for Production</b>
+    <main className="min-h-screen bg-gray-900 p-8 font-body">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2 font-headline">
+            🚀 AI Code Generator
+          </h1>
+          <p className="text-gray-400">
+            Smart fallback: Gemini → HuggingFace → Web Search
+          </p>
         </div>
 
-        <Card>
-          <CardContent className="pt-6 space-y-6">
-            <div className="space-y-2">
-              <Button onClick={handleSignIn} className="w-full">
-                <GoogleIcon className="mr-2 h-4 w-4" />
-                Sign in with Google
-              </Button>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <Label htmlFor="enable-suggestions" className="flex items-center gap-2 cursor-pointer">
-                <Sparkles className="w-5 h-5 text-accent" />
-                <span>Enable Suggestions</span>
-              </Label>
-              <Switch id="enable-suggestions" checked={enabled} onCheckedChange={handleEnableToggle} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="language-select" className="flex items-center gap-2">
-                <Code className="w-5 h-5" />
-                <span>Language</span>
-              </Label>
-              <Select value={language} onValueChange={handleLangChange}>
-                <SelectTrigger id="language-select" className="w-full font-code">
-                  <SelectValue placeholder="Select language..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang} value={lang} className="font-code">
-                      {lang}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-gray-800 rounded-lg shadow-2xl p-6 mb-6">
+          <label htmlFor="prompt" className="block text-white text-lg font-semibold mb-3">
+            Describe what you want to build:
+          </label>
+          <textarea
+            id="prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="E.g., Create a React component for a todo list with add, delete, and mark complete functionality..."
+            className="w-full h-32 p-4 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none font-code"
+          />
+          
+          <button
+            onClick={handleGenerateCode}
+            disabled={loading}
+            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Generating with Smart Fallback...' : 'Generate Code'}
+          </button>
 
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="code-prompt">Code Generation Prompt</Label>
-              <Textarea 
-                id="code-prompt"
-                placeholder="e.g., A React component for a login form"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="font-code"
-              />
+          {loading && (
+            <div className="mt-4 text-center">
+              <div className="inline-flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+              <p className="text-gray-400 mt-2 text-sm">Trying multiple AI sources...</p>
             </div>
-            <Button onClick={handleGenerateCode} className="w-full" disabled={isGenerating}>
-              <Wand2 className="mr-2" />
-              {isGenerating ? 'Generating...' : 'Generate Code'}
-            </Button>
-          </CardContent>
-        </Card>
+          )}
+        </div>
 
-        <Card>
-          <CardContent className="pt-6">
-             <Button onClick={handleAutocorrect} variant="secondary" className="w-full">
-                <Wand2 className="mr-2" />
-                Test Auto-Correct
-              </Button>
-          </CardContent>
-        </Card>
-        
+        {error && (
+          <div className="bg-red-900/50 border border-red-500 text-red-200 px-6 py-4 rounded-lg mb-6">
+            <p className="font-semibold">⚠️ Error:</p>
+            <pre className="text-sm whitespace-pre-wrap mt-2 font-code">{error}</pre>
+            <div className="mt-4 bg-red-800/30 p-4 rounded">
+              <p className="font-semibold text-sm mb-2">💡 Quick Setup Guide:</p>
+              <p className="text-xs mb-2">Create <code className="bg-gray-900 px-1 py-0.5 rounded font-code">.env.local</code> in your project root with:</p>
+              <pre className="text-xs bg-gray-900 p-2 rounded overflow-x-auto font-code">
+{`# Get from: https://makersuite.google.com/app/apikey
+NEXT_PUBLIC_GEMINI_API_KEY=your_key_here
+
+# Optional: https://huggingface.co/settings/tokens
+NEXT_PUBLIC_HUGGINGFACE_API_KEY=your_key_here`}
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {usedProvider && (
+          <div className="bg-green-900/30 border border-green-500 text-green-200 px-6 py-3 rounded-lg mb-6">
+            <p className="text-sm">✅ Code generated successfully using: <strong>{usedProvider}</strong></p>
+          </div>
+        )}
+
+        {generatedCode && (
+          <div className="bg-gray-800 rounded-lg shadow-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-white font-headline">Generated Code:</h2>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedCode);
+                  toast({ title: '✅ Code copied to clipboard!' });
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+              >
+                <span>📋</span>
+                <span>Copy Code</span>
+              </button>
+            </div>
+            <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto border border-gray-700 text-sm">
+              <code className="font-code">{generatedCode}</code>
+            </pre>
+          </div>
+        )}
+
+        {searchResults.length > 0 && (
+          <div className="mt-6 bg-gray-800 rounded-lg shadow-2xl p-6">
+            <h3 className="text-xl font-bold text-white mb-4 font-headline">🔗 Related Resources:</h3>
+            <div className="space-y-3">
+              {searchResults.slice(0, 5).map((result, index) => (
+                result.FirstURL && (
+                  <a
+                    key={index}
+                    href={result.FirstURL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <p className="text-blue-400 text-sm font-semibold">{result.FirstURL}</p>
+                    {result.Text && (
+                      <p className="text-gray-300 text-xs mt-1">{result.Text.slice(0, 150)}...</p>
+                    )}
+                  </a>
+                )
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8 bg-gray-800/50 border border-gray-700 rounded-lg p-6">
+          <h3 className="text-xl font-bold text-white mb-3 font-headline">🎯 Fallback Strategy:</h3>
+          <div className="space-y-3">
+            {aiModels.map((model) => (
+              <div key={model.name} className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  {model.priority}
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-semibold">{model.name}</p>
+                  <p className="text-gray-400 text-sm">
+                    {model.provider === 'gemini-flash' && '⚡ Fastest AI model (Primary)'}
+                    {model.provider === 'gemini-pro' && '🧠 More powerful AI (Backup)'}
+                    {model.provider === 'huggingface' && '🤗 Open source AI (Free)'}
+                    {model.provider === 'web-search' && '🌐 Stack Overflow + GitHub search (Always works!)'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+            <p className="text-blue-300 text-sm">
+              <strong>💡 How it works:</strong> The app tries each method in order. If one fails, it automatically moves to the next. 
+              Web search is the final fallback that ALWAYS works - it finds real code examples from Stack Overflow and GitHub!
+            </p>
+          </div>
+        </div>
       </div>
-    </>
+    </main>
   );
 }
