@@ -7,7 +7,9 @@ import { defineFlow } from '@genkit-ai/flow';
 
 // --- Check API key exists ---
 if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
-  throw new Error('Missing GEMINI_API_KEY or GOOGLE_API_KEY in .env. Add it and restart.');
+  throw new Error(
+    'Missing GEMINI_API_KEY or GOOGLE_API_KEY in .env. Add it and restart.'
+  );
 }
 
 // --- Configure Google GenAI ---
