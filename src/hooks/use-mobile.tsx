@@ -1,19 +1,13 @@
-import * as React from "react"
-
-const MOBILE_BREAKPOINT = 768
-
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
+{
+  "name": "ai-code-assistant-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'This is a Chrome Extension. Load the /public directory in chrome://extensions'",
+    "build": "echo 'No build step needed for this extension. The /public directory is the build output.'",
+    "start": "npm run dev",
+    "lint": "echo 'No linter configured.'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }

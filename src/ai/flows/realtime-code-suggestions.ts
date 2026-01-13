@@ -1,55 +1,13 @@
-'use server';
-
-/**
- * @fileOverview A real-time code suggestion AI agent.
- *
- * - suggestCode - A function that suggests code in real time.
- * - suggestCodeFlow - The Genkit flow definition.
- * - SuggestCodeInput - The input type for the suggestCode function.
- * - SuggestCodeOutput - The return type for the suggestCode function.
- */
-
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const SuggestCodeInputSchema = z.object({
-  partial: z.string().describe('The partial code snippet to generate suggestions for.'),
-  language: z.string().describe('The programming language of the code snippet.'),
-});
-export type SuggestCodeInput = z.infer<typeof SuggestCodeInputSchema>;
-
-const SuggestCodeOutputSchema = z.object({
-  suggestion: z.string().describe('The generated code suggestion.'),
-});
-export type SuggestCodeOutput = z.infer<typeof SuggestCodeOutputSchema>;
-
-const prompt = ai.definePrompt({
-  name: 'suggestCodePrompt',
-  input: {schema: SuggestCodeInputSchema},
-  output: {schema: SuggestCodeOutputSchema},
-  prompt: `You are an expert AI code assistant. You will generate code suggestions based on the partial code snippet and the programming language provided.
-
-Partial Code Snippet:
-{{partial}}
-
-Programming Language:
-{{language}}
-
-Suggestion:`,
-});
-
-export const suggestCodeFlow = ai.defineFlow(
-  {
-    name: 'suggestCodeFlow',
-    inputSchema: SuggestCodeInputSchema,
-    outputSchema: SuggestCodeOutputSchema,
+{
+  "name": "ai-code-assistant-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'This is a Chrome Extension. Load the /public directory in chrome://extensions'",
+    "build": "echo 'No build step needed for this extension. The /public directory is the build output.'",
+    "start": "npm run dev",
+    "lint": "echo 'No linter configured.'"
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
-
-export async function suggestCode(input: SuggestCodeInput): Promise<SuggestCodeOutput> {
-  return suggestCodeFlow(input);
+  "dependencies": {},
+  "devDependencies": {}
 }

@@ -1,59 +1,13 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 210 29% 96%;
-    --foreground: 221 14% 18%;
-    --card: 210 29% 99%;
-    --card-foreground: 221 14% 18%;
-    --popover: 210 29% 99%;
-    --popover-foreground: 221 14% 18%;
-    --primary: 210 40% 50%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 90%;
-    --secondary-foreground: 210 40% 20%;
-    --muted: 210 40% 93%;
-    --muted-foreground: 210 30% 50%;
-    --accent: 93 68% 70%;
-    --accent-foreground: 93 50% 20%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 210 30% 85%;
-    --input: 210 30% 90%;
-    --ring: 210 40% 50%;
-    --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 221 14% 18%;
-    --foreground: 210 29% 96%;
-    --card: 221 14% 22%;
-    --card-foreground: 210 29% 96%;
-    --popover: 221 14% 22%;
-    --popover-foreground: 210 29% 96%;
-    --primary: 210 40% 50%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 221 14% 28%;
-    --secondary-foreground: 210 29% 96%;
-    --muted: 221 14% 28%;
-    --muted-foreground: 210 20% 70%;
-    --accent: 93 68% 70%;
-    --accent-foreground: 93 50% 20%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 221 14% 28%;
-    --input: 221 14% 28%;
-    --ring: 210 40% 70%;
-  }
-}
- 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+{
+  "name": "ai-code-assistant-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'This is a Chrome Extension. Load the /public directory in chrome://extensions'",
+    "build": "echo 'No build step needed for this extension. The /public directory is the build output.'",
+    "start": "npm run dev",
+    "lint": "echo 'No linter configured.'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }

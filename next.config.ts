@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  output: 'export',
   distDir: 'build',
 };
 

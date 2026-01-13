@@ -1,33 +1,13 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { ThemeProvider } from '@/app/context/theme-context';
-import { Toaster } from '@/components/ui/toaster';
-
-export const metadata: Metadata = {
-  title: 'Code Gemini',
-  description: 'AI code assistant powered by Gemini',
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-body antialiased">
-        <ThemeProvider>
-          {children}
-          <Toaster />
-          </ThemeProvider>
-      </body>
-    </html>
-  );
+{
+  "name": "ai-code-assistant-extension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'This is a Chrome Extension. Load the /public directory in chrome://extensions'",
+    "build": "echo 'No build step needed for this extension. The /public directory is the build output.'",
+    "start": "npm run dev",
+    "lint": "echo 'No linter configured.'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }
