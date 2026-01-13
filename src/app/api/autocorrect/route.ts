@@ -14,6 +14,12 @@ export async function POST(req: NextRequest) {
         {status: 400}
       );
     }
+
+    // Check for API key before calling the flow
+    if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+      console.error("[autocorrect] API key is missing");
+      return NextResponse.json({ error: "Server configuration error: API key not set" }, { status: 500 });
+    }
     
     const result = await autoCorrectCode({code, language});
     
