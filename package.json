@@ -3,26 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "serve public -p 3000",
-    "build": "echo 'No build step needed. The /public directory contains the production-ready extension.'",
+    "dev": "serve public",
+    "build": "echo 'No build step needed for this extension. The /public directory is the build output.'",
     "start": "npm run dev",
-    "lint": "next lint"
+    "lint": "echo 'No linter configured.'"
   },
-  "dependencies": {
-    "lucide-react": "^0.378.0",
-    "next": "14.2.3",
-    "react": "^18",
-    "react-dom": "^18"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.3",
-    "postcss": "^8",
-    "serve": "^14.2.3",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "serve": "^14.2.3"
   }
 }
