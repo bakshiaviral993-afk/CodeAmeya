@@ -5,7 +5,8 @@ import { generateCode } from '@/ai/flows/code-generation-from-prompt';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, language } = await req.json();
+    const body = await req.json();
+    const { prompt, language } = body;
 
     if (!prompt) {
       return NextResponse.json(
@@ -14,8 +15,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Await the result from the wrapper function
     const result = await generateCode({ prompt, language });
     
+    // The result is already in the correct { code: '...' } format.
+    // Return it directly.
     return NextResponse.json(result);
     
   } catch (error: any) {

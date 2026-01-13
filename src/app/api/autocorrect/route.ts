@@ -5,7 +5,8 @@ import {autoCorrectCode} from '@/ai/flows/code-autocorrection';
 
 export async function POST(req: NextRequest) {
   try {
-    const {code, language} = await req.json();
+    const body = await req.json();
+    const {code, language} = body;
 
     if (!code || !language) {
       return NextResponse.json(
@@ -13,9 +14,12 @@ export async function POST(req: NextRequest) {
         {status: 400}
       );
     }
-
+    
+    // Await the result from the wrapper function
     const result = await autoCorrectCode({code, language});
-
+    
+    // The result is already in the correct { correctedCode: '...' } format.
+    // Return it directly.
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Error in autocorrect API route:', error);
