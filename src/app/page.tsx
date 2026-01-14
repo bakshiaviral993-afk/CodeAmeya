@@ -2,7 +2,7 @@
 // The main UI is now in /public/popup.html.
 // This page can be used as a landing or documentation page for the extension.
 
-import { FileText, Github, Download } from 'lucide-react';
+import { FileText, Github, Download, Package } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -24,14 +24,12 @@ export default function Home() {
           <div className="space-y-4">
              <div>
               <p className="text-gray-700 dark:text-gray-300 mb-4">
-                Click the button below to download a .zip file of the entire project. You can also use Git to sync your changes.
+                To download your project, click the <span className="font-bold">main menu icon (☰)</span> in the top-left corner of the Firebase Studio interface, and then select the <span className="font-bold">"Download workspace"</span> option.
               </p>
-              <a href="/workspace.zip" download="ai-code-assistant.zip">
-                 <button className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                    <Download className="w-5 h-5" />
-                    Download Project (.zip)
-                  </button>
-              </a>
+               <div className="bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 text-sm rounded-lg p-4 flex items-center gap-3">
+                  <Package className="w-6 h-6 shrink-0"/>
+                  <span>This will download a .zip file of your entire project, including all the Chrome Extension files in the `public` directory.</span>
+              </div>
             </div>
              <div>
               <h3 className="text-xl font-semibold mb-2 mt-6">Sync with Git</h3>
