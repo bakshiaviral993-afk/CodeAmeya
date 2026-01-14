@@ -2,7 +2,7 @@
 // The main UI is now in /public/popup.html.
 // This page can be used as a landing or documentation page for the extension.
 
-import { FileText, Github, LifeBuoy } from 'lucide-react';
+import { FileText, Github, Download } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -19,6 +19,31 @@ export default function Home() {
 
         <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
           <h2 className="text-3xl font-bold mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
+            Download Your Project
+          </h2>
+          <div className="space-y-4">
+             <div>
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
+                Click the button below to download a .zip file of the entire project. You can also use Git to sync your changes.
+              </p>
+              <a href="/workspace.zip" download="ai-code-assistant.zip">
+                 <button className="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                    <Download className="w-5 h-5" />
+                    Download Project (.zip)
+                  </button>
+              </a>
+            </div>
+             <div>
+              <h3 className="text-xl font-semibold mb-2 mt-6">Sync with Git</h3>
+               <p className="text-gray-700 dark:text-gray-300">
+                Alternatively, you can use the step-by-step commands in the <a href="/GIT_COMMANDS.md" target="_blank" className="text-blue-500 hover:underline">Git Commands Guide</a> to push your code to a GitHub repository and pull it to your local machine.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mt-12">
+          <h2 className="text-3xl font-bold mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
             Installation & Setup
           </h2>
           
@@ -26,9 +51,10 @@ export default function Home() {
             <div>
               <h3 className="text-xl font-semibold mb-2">1. Load the Extension in Chrome</h3>
               <p className="text-gray-700 dark:text-gray-300">
-                This project is now a Chrome Extension. The files are located in the `public` directory.
+                This project is a Chrome Extension. The files are located in the `public` directory.
               </p>
               <ul className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300 mt-2">
+                <li>Unzip the downloaded file.</li>
                 <li>Open Chrome and navigate to <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-md text-sm">chrome://extensions</code>.</li>
                 <li>Enable "Developer mode" using the toggle in the top-right corner.</li>
                 <li>Click the "Load unpacked" button.</li>
@@ -43,19 +69,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-12">
-            <a href="#" className="block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <FileText className="w-8 h-8 text-blue-500 mb-3"/>
-              <h3 className="text-xl font-bold mb-2">Read the Docs</h3>
-              <p className="text-gray-600 dark:text-gray-400">Check the README.md file in the project for full documentation on features and usage.</p>
-            </a>
-            <a href="#" className="block p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow">
-              <Github className="w-8 h-8 mb-3"/>
-              <h3 className="text-xl font-bold mb-2">View on GitHub</h3>
-              <p className="text-gray-600 dark:text-gray-400">Explore the source code, report issues, or contribute to the project.</p>
-            </a>
         </div>
 
         <footer className="text-center mt-16 text-gray-500">
